@@ -1,16 +1,24 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { GroupService } from 'src/group/group.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DeepPartial, Repository } from 'typeorm';
 import { Poll } from 'src/typeORM/entities/poll';
 import { PollOption } from 'src/typeORM/entities/polloption';
 import { AddPollDto } from './dtos/addPollDto.dto';
 import { STATUS_CODES } from 'http';
 import { UsersService } from 'src/users/users.service';
+import { AddCommentDto } from './dtos/addComentDto.dto';
+import { Comments } from 'src/typeORM/entities/comments';
+import { use } from 'passport';
+import { User } from 'src/typeORM/entities/user';
 
 @Injectable()
 export class PollService {
   constructor(
+    @InjectRepository(Comments)
+    private readonly commentRepository: Repository<Comments>,
+    @InjectRepository(User)
+    private readonly userRepository : Repository<User>,
     @InjectRepository(Poll)
     private readonly pollRepository: Repository<Poll>,
     @InjectRepository(PollOption)
@@ -49,6 +57,89 @@ export class PollService {
     newPoll.options = pollOptions;
 
     return this.findOne(newPoll.id, !loadGroup, loadPollOptions);
+  }
+
+  async addComment(commentDto: AddCommentDto, username: string) {
+    const { pollId, commentText } = commentDto;
+    const poll = await this.findOne(pollId,true,true); // Assuming you have a method to find a poll by ID
+    const user = await this.usersService.findOneByUsername(username, true);
+
+    if (!poll) {
+      throw new NotFoundException('Poll not found');
+    }
+
+    if(!user){
+      throw new NotFoundException('user not found');
+    }
+
+    const newComment = this.commentRepository.create({ commentText ,poll, user});
+
+    const savedComment = await this.commentRepository.save(newComment);
+    return savedComment;
+
+  }
+
+  async removeComment(commentId: string, username: string): Promise<string> {
+
+    const loadGroup = true;
+    const loadPollOptions = true;
+    const user = await this.usersService.findOneByUsername(username, loadGroup);
+
+    if(!commentId){
+      throw new BadRequestException("Comment Id is required")
+    }
+    const commentToRemove = await this.findCommentById(commentId);
+
+    if (!commentToRemove) {
+      throw new NotFoundException('Comment not found.');
+    }
+
+    if (!user) {
+      throw new NotFoundException('Invalid admin username');
+    }
+
+    if (user.username !== commentToRemove.user.username) {
+      throw new UnauthorizedException('User lacks necessary permissions: The Comment does not belong to the user');
+    }
+
+
+    await this.commentRepository.delete(commentId);
+    return STATUS_CODES.success;
+  }
+
+
+  async updateComment(commentId: string,commentText: string, username: string){
+    const loadGroup = true;
+    const loadPollOptions = true;
+    const user = await this.usersService.findOneByUsername(username, loadGroup);
+
+    if(!commentId){
+      throw new BadRequestException("Comment Id is required")
+    }
+    if (!commentText){
+      throw new HttpException("Comment text Should Not be Empty",401)
+    }
+    const commentToUpdate = await this.findCommentById(commentId);
+
+    if (!commentToUpdate) {
+      throw new NotFoundException('Comment not found.');
+    }
+
+    if (!user) {
+      throw new NotFoundException('Invalid admin username');
+    }
+   
+
+    if (user.username !== commentToUpdate.user.username) {
+      throw new UnauthorizedException('User lacks necessary permissions: The Comment does not belong to the user');
+    }
+
+    
+
+    commentToUpdate.commentText = commentText;
+    await this.commentRepository.save(commentToUpdate);
+    
+    return STATUS_CODES.success;
   }
 
   async removePoll(pollId: string, adminUsername: string): Promise<string> {
@@ -105,6 +196,8 @@ export class PollService {
     return this.pollRepository.save(pollToClose);
   }
 
+
+
   async castVote(pollId: string, optionId: string, username: string): Promise<Poll> {
     const loadGroup = true;
     const loadPollOptions = true;
@@ -156,11 +249,18 @@ export class PollService {
     return this.pollRepository.findOne({ where: { id: id }, relations: relations });
   }
 
+  async findCommentById(id:string){
+      const relations = ['user']
+      return this.commentRepository.findOne({where: { id: id },relations: relations})
+  }
+
   async getPollsByGroupId(groupId: string): Promise<Poll[]> {
     return this.pollRepository
       .createQueryBuilder('poll')
       .leftJoinAndSelect('poll.options', 'options')
+      .leftJoinAndSelect('poll.comments', 'comments')
       .where('poll.group.id = :groupId', { groupId })
       .getMany();
   }
+  
 }

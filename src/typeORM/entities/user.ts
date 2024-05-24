@@ -1,6 +1,7 @@
-import { Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, PrimaryColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany, PrimaryColumn } from 'typeorm';
 import { Group } from './group';
 import { Poll } from './poll';
+import { Comments } from './comments';
 
 @Entity({ name: 'users' })
 export class User {
@@ -18,6 +19,10 @@ export class User {
 
   @Column({ name: 'token_blacklist', type: 'simple-array', nullable: true })
   tokenBlackList: string[];
+
+  @OneToMany(() => Comments, (comment) => comment.user)
+  comments: Comments[];
+
 
   @ManyToOne(() => Group, (group) => group.users, {
     nullable: true,

@@ -11,6 +11,8 @@ import { Request } from 'express';
 import { STATUS_CODES } from 'http';
 import { GroupService } from 'src/group/group.service';
 import { PollResponseDto } from './dtos/pollResponseDto.dto';
+import { AddCommentDto } from './dtos/addComentDto.dto';
+import { Comments } from 'src/typeORM/entities/comments';
 
 @ApiTags('polls')
 @Controller('polls')
@@ -36,6 +38,36 @@ export class PollController {
     const adminUsername = this.authService.decodeToken(token)?.username;
 
     return this.pollService.addPoll(addPollDto, adminUsername);
+  }
+
+
+
+  @UseGuards(RolesGuard,JwtGuard)
+  @Roles(["Admin","User"])
+  @Post('comments')
+  async addComment(@Req() request: Request, @Body() commentDto: AddCommentDto) {
+    const token = request.headers.authorization.split(' ')[1];
+    const username = this.authService.decodeToken(token)?.username;
+    return this.pollService.addComment(commentDto, username);
+  }
+
+  @UseGuards(RolesGuard, JwtGuard)
+  @Roles(['Admin','User'])
+  @Delete('/comments/:id')
+  async deleteComment(@Req() request: Request, @Param('id') commentId: string): Promise<string> {
+    const token = request.headers.authorization.split(' ')[1];
+    const username = this.authService.decodeToken(token)?.username;
+    return this.pollService.removeComment(commentId,username)
+  }
+
+  @UseGuards(RolesGuard, JwtGuard)
+  @Roles(['Admin','User'])
+  @Patch('/comments/:id')
+  async updateComment(@Req() request: Request, @Param('id') commentId: string,@Body('commentText') commentText: string): Promise<string> {
+    
+    const token = request.headers.authorization.split(' ')[1];
+    const username = this.authService.decodeToken(token)?.username;
+    return this.pollService.updateComment(commentId,commentText,username)
   }
 
   @UseGuards(RolesGuard, JwtGuard)

@@ -7,10 +7,13 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { ApiTags } from '@nestjs/swagger';
 import { RolesGuard } from './guards/role.guard';
+import { User } from 'src/typeORM/entities/user';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @ApiTags('auth')
 @Module({
   imports: [
+    TypeOrmModule.forFeature([User]),
     UsersModule,
     JwtModule.register({
       global: true,
@@ -21,5 +24,6 @@ import { RolesGuard } from './guards/role.guard';
   providers: [AuthService, LocalStrategy, JwtStrategy, RolesGuard],
   controllers: [AuthController],
   exports: [AuthService, RolesGuard],
+  
 })
 export class AuthModule {}

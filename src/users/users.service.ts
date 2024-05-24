@@ -7,6 +7,7 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
+  
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
@@ -14,11 +15,11 @@ export class UsersService {
 
   async createUser(createUserDto: CreateUserDto): Promise<User> {
     const salt = await bcrypt.genSalt(10);
-
     createUserDto.password = await bcrypt.hash(createUserDto.password, salt);
 
     const newUser: User = this.userRepository.create({
       ...createUserDto,
+      comments : [],
       tokenBlackList: null,
     });
 

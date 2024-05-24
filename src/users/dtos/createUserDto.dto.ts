@@ -28,6 +28,8 @@ export class CreateUserDto {
   @IsNotEmpty({ message: 'Password cannot be empty' })
   password: string;
 
+  comments:  string[];
+
   @IsNotEmpty({ message: 'role cannot be empty' })
   @IsIn(['Admin', 'User'], { message: 'Role must be either "Admin" or "User"' })
   role: string;

@@ -7,16 +7,22 @@ import * as zxcvbn from 'zxcvbn';
 import { ApiTags } from '@nestjs/swagger';
 import { SignInResponseDto } from './dtos/signInResponseDto.dto';
 import { STATUS_CODES } from 'http';
+import { InjectRepository } from '@nestjs/typeorm';
+import { User } from 'src/typeORM/entities/user';
+import { Repository } from 'typeorm';
 
 @ApiTags('auth')
 @Injectable()
 export class AuthService {
   constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private usersService: UsersService,
     private jwtService: JwtService,
   ) {}
 
   async signUp(createUserDto: CreateUserDto): Promise<SignInResponseDto> {
+    createUserDto.comments = [];
     const MINIMUM_PASSWORD_SCORE = 3;
     const isEmailUsed = await this.usersService.isEmailUsed(createUserDto.email);
     const loadGroup = false;
@@ -89,6 +95,46 @@ export class AuthService {
       throw InternalServerErrorException;
     }
   }
+
+  async changePassword(username:string, newPassword:string){
+    const MINIMUM_PASSWORD_SCORE = 3;
+    const user = await this.usersService.findOneByUsername(username, true);
+    if (!user) {
+      throw new BadRequestException('No such username');
+    }
+    if (!newPassword){
+      throw new BadRequestException('Password cant be empty')
+    }
+
+    const passwordScore = zxcvbn(newPassword).score;
+    if (passwordScore < MINIMUM_PASSWORD_SCORE) {
+      throw new BadRequestException('Password is not strong enough');
+    }
+
+    try {
+    const salt = await bcrypt.genSalt(10);
+    const password = await bcrypt.hash(newPassword, salt);
+    user.password = password;
+
+    await this.usersService.updateUser(user);
+
+    return STATUS_CODES.success
+
+    } catch (error) {
+      throw new InternalServerErrorException('Internal server error');
+    }
+  }
+
+  async deleteAccount(username:string){
+    const user = this.usersService.findOneByUsername(username,true);
+    if (!user){
+      throw new BadRequestException('No such username');
+    }
+
+    await this.userRepository.delete(username);
+    return STATUS_CODES.success;
+  }
+
 
   async validatePassword(username: string, plainTextPassword: string): Promise<boolean> {
     const loadGroup = false;

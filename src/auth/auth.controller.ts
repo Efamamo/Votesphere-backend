@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { SignInUserDto } from './dtos/signInUserDto.dto';
@@ -7,6 +7,9 @@ import { RefreshJwtGuard } from './guards/refreshJwtToken.guard';
 import { Request } from 'express';
 import { CreateUserDto } from 'src/users/dtos/createUserDto.dto';
 import { SignInResponseDto } from './dtos/signInResponseDto.dto';
+import { JwtGuard } from './guards/jwtAuth.guard';
+import { RolesGuard } from './guards/role.guard';
+import { Roles } from './decorators/roles.decorator';
 
 @ApiTags('auth')
 @ApiBearerAuth()
@@ -51,6 +54,28 @@ export class AuthController {
     return this.authService.signIn(signInDto.username);
   }
 
+  @UseGuards(JwtGuard,RolesGuard)
+  @Roles(["Admin","User"])
+  @Patch('changePassword')
+  async changePassword(@Req() request: Request, @Body('newPassword') newPassword: string){
+    
+    const token = request.headers.authorization.split(' ')[1];
+    const username = this.authService.decodeToken(token)?.username;
+    return this.authService.changePassword(username,newPassword)
+  }
+
+  @UseGuards(JwtGuard,RolesGuard)
+  @Roles(["Admin","User"])
+  @Delete('deleteAccount')
+  async deleteAccount(@Req() request: Request){
+    
+    const token = request.headers.authorization.split(' ')[1];
+    const username = this.authService.decodeToken(token)?.username;
+    
+    return this.authService.deleteAccount(username)
+  }
+
+
   @UseGuards(RefreshJwtGuard)
   @Get('refresh-token')
   @ApiOperation({
@@ -64,6 +89,7 @@ export class AuthController {
     status: 401,
     description: 'Unauthorized: Invalid or expired refresh token',
   })
+
   async refreshToken(@Req() request: Request): Promise<{ access_token: string }> {
     const token = request.headers.authorization.split(' ')[1];
     const username = this.authService.decodeToken(token)?.username;
