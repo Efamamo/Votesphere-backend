@@ -8,6 +8,7 @@ import { GroupService } from './group.service';
 import { GetGroupResponseDto } from './dtos/getGroupResponseDto.dto';
 import { Request } from 'express';
 import { AuthService } from 'src/auth/auth.service';
+import { User } from 'src/typeORM/entities/user';
 
 @ApiTags('groups')
 @Controller('groups')
@@ -65,7 +66,7 @@ export class GroupController {
   @ApiResponse({ status: 401, description: 'Unauthorized: Current user is not admin' })
   @ApiResponse({ status: 404, description: 'Not Found: Invalid username or admin must create a group before attempting to add members' })
   //
-  async addMemberToGroup(@Body('username') newMemberUsername: string, @Req() request: Request): Promise<string> {
+  async addMemberToGroup(@Body('username') newMemberUsername: string, @Req() request: Request): Promise<User> {
     const token = request.headers.authorization.split(' ')[1];
     const adminUsername = this.authService.decodeToken(token)?.username;
 

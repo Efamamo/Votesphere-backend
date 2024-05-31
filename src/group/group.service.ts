@@ -6,6 +6,7 @@ import { CreateGroupDto } from './dtos/createGroupDto.dto';
 import { UsersService } from 'src/users/users.service';
 import { GetGroupResponseDto } from './dtos/getGroupResponseDto.dto';
 import { STATUS_CODES } from 'http';
+import { User } from 'src/typeORM/entities/user';
 
 @Injectable()
 export class GroupService {
@@ -68,7 +69,7 @@ export class GroupService {
     return transformedMembers;
   }
 
-  async addMemberToGroup(newMemberUsername: string, adminUsername: string): Promise<string> {
+  async addMemberToGroup(newMemberUsername: string, adminUsername: string): Promise<User> {
     const loadGroup = true;
     const admin = await this.usersService.findOneByUsername(adminUsername, loadGroup);
     const adminsGroup = admin.group;
@@ -96,8 +97,11 @@ export class GroupService {
     newMember.group = adminsGroup;
 
     const saveSuccess = await this.usersService.updateUser(newMember);
+    if(!saveSuccess){
+      throw new InternalServerErrorException
+    }
 
-    return saveSuccess ? STATUS_CODES.successful : STATUS_CODES.InternalServerError;
+    return newMember
   }
 
   async removeMemberFromGroup(bannedMemberUsername: string, adminUsername: string): Promise<string> {
@@ -124,6 +128,7 @@ export class GroupService {
 
     bannedMember.group = null;
     const saveSuccess = await this.usersService.updateUser(bannedMember);
+    
 
     return saveSuccess ? STATUS_CODES.successful : STATUS_CODES.InternalServerError;
   }

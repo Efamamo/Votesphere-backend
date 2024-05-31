@@ -28,7 +28,7 @@ import { Comments } from './typeORM/entities/comments';
       autoLoadEntities: true,
       entities: [User, Group, PollOption, Poll, Comments],
       synchronize: true,
-      logging: true,
+      
     }),
   ],
   controllers: [AppController],

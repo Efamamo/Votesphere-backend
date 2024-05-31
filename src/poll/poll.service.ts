@@ -43,8 +43,9 @@ export class PollService {
     if (group.id !== groupID) {
       throw new UnauthorizedException('User lacks necessary permissions');
     }
+    
 
-    const newPoll = this.pollRepository.create({ question, group });
+    const newPoll = this.pollRepository.create({ question, group,comments: [] });
     const savedPoll = await this.pollRepository.save(newPoll);
 
     const pollOptions = options.map((optionText: string) =>
@@ -55,8 +56,12 @@ export class PollService {
     );
     await this.pollOptionRepository.save(pollOptions);
     newPoll.options = pollOptions;
+    
 
-    return this.findOne(newPoll.id, !loadGroup, loadPollOptions);
+    const my_poll = await this.findOne(newPoll.id, !loadGroup, loadPollOptions);
+    
+    return my_poll
+    
   }
 
   async addComment(commentDto: AddCommentDto, username: string) {
@@ -233,6 +238,7 @@ export class PollService {
     await this.usersService.updateUser(user);
 
     return this.findOne(pollId, false, true);
+    
   }
 
   async findOne(id: string, withGroup: boolean, withOptions: boolean): Promise<Poll> {

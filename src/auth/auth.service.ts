@@ -67,7 +67,7 @@ export class AuthService {
       expiresIn: '30d',
     });
 
-    return { username, role, groupID, accessToken, refreshToken };
+    return { username, role, groupID, accessToken, refreshToken, email };
   }
 
   async refreshToken(username: string): Promise<{ access_token: string }> {
@@ -96,9 +96,14 @@ export class AuthService {
     }
   }
 
-  async changePassword(username:string, newPassword:string){
+  async changePassword(username:string, newPassword:string, oldPassword:string){
     const MINIMUM_PASSWORD_SCORE = 3;
     const user = await this.usersService.findOneByUsername(username, true);
+
+    const validatePassword = await this.validatePassword(username, oldPassword);
+
+    console.log(validatePassword);
+
     if (!user) {
       throw new BadRequestException('No such username');
     }

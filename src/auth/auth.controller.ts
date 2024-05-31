@@ -10,6 +10,7 @@ import { SignInResponseDto } from './dtos/signInResponseDto.dto';
 import { JwtGuard } from './guards/jwtAuth.guard';
 import { RolesGuard } from './guards/role.guard';
 import { Roles } from './decorators/roles.decorator';
+import { changePasswordDto } from './dtos/changePasswordDto.dto';
 
 @ApiTags('auth')
 @ApiBearerAuth()
@@ -57,11 +58,11 @@ export class AuthController {
   @UseGuards(JwtGuard,RolesGuard)
   @Roles(["Admin","User"])
   @Patch('changePassword')
-  async changePassword(@Req() request: Request, @Body('newPassword') newPassword: string){
+  async changePassword(@Req() request: Request, @Body() changePasswordDto: changePasswordDto) {
     
     const token = request.headers.authorization.split(' ')[1];
     const username = this.authService.decodeToken(token)?.username;
-    return this.authService.changePassword(username,newPassword)
+    return this.authService.changePassword(username,changePasswordDto.newPassword,changePasswordDto.oldPassword)
   }
 
   @UseGuards(JwtGuard,RolesGuard)
